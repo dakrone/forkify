@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
   s.homepage = %q{http://github.com/dakrone/forkify}
   s.rdoc_options = ["--main", "README.txt"]
   s.require_paths = ["lib"]
-  s.rubyforge_project = %q{hinmanm}
+  s.rubyforge_project = %q{writequit}
   s.rubygems_version = %q{1.3.4}
   s.summary = %q{forkify.rb makes it easy to process a bunch of data using 'n' worker processes}
   s.test_files = ["test/test_forkify.rb"]
