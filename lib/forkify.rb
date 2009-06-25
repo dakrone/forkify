@@ -43,7 +43,7 @@ module Enumerable
             end
           w.write( Marshal.dump( result ))
           w.close
-          exit
+          exit!
         end
 
         pids << pid
