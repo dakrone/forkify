@@ -1,3 +1,10 @@
+=== 0.0.2 / 2009-06-29
+
+* 2 bugfixes
+
+  * Forkify now works correctly returns array values on RedHat machines
+  * More tests!
+
 === 0.0.1 / 2009-06-23
 
 * 1 major enhancement

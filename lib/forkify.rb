@@ -1,9 +1,27 @@
-#require 'pp'
+FORKIFY_DEBUG = false
+require 'pp' if FORKIFY_DEBUG
 
 module Enumerable
+
+  #
+  # Forkify will process _block_'s actions using processes. If no number of processes is
+  # given, the default of 5 will be used. If there are less than _procs_ number of items
+  # in the +Enumerable+ type, less processes will be spawned.
+  #
+  # It should be noted that forkify will *always* return an +Array+ at this time, so be
+  # careful with +Hash+ objects.
+  #
+  # = Examples
+  #
+  #    [1, 2, 3].forkify { |n| n*2 } => [2, 4, 6]
+  #
+  #    {:a => 1, :b => 2, :c => 3}.forkify { |k, v| [v, k] } => [[1, :a], [2, :b], [3, :c]]
+  #
+  #    10.times.forkify(10) { sleep(1) } => [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] (runs for less than 2 seconds)
+  #
   def forkify procs = 5, &block
-    #puts "Class: #{self.class}"
-    if Array === self
+    puts "Forkify Class: #{self.class}" if FORKIFY_DEBUG
+    if self === Array
       items = self
     else
       begin
@@ -27,9 +45,9 @@ module Enumerable
       rpipes = []
 
       num_procs.times do |i|
-        #puts "Fork # #{i}"
+        puts "Fork # #{i}" if FORKIFY_DEBUG
         r, w = IO.pipe
-        #pp "r, w: #{r} #{w}"
+        pp "r, w: #{r} #{w}" if FORKIFY_DEBUG
         wpipes << w
         rpipes << r
         pid = fork
@@ -52,19 +70,27 @@ module Enumerable
 
       offset += num_procs
 
-      #pp "Waiting for pids: #{pids}"
+      pp "Waiting for pids: #{pids.inspect}" if FORKIFY_DEBUG
       pids.each { |p| Process.waitpid(p) }
 
-      datawaiting_pipes = Kernel.select(rpipes, wpipes, nil, 2)
-      readwaiting_pipes = datawaiting_pipes[0]
-      writewaiting_pipes = datawaiting_pipes[1]
-      #pp "data: #{datawaiting_pipes}"
-      #pp "read: #{readwaiting_pipes}"
-      #pp "write: #{writewaiting_pipes}"
-      unless readwaiting_pipes.size != writewaiting_pipes.size
-        readwaiting_pipes.size.times do |i|
-          r = readwaiting_pipes[i]
-          w = writewaiting_pipes[i]
+      # 1 select version
+      #datawaiting_pipes = Kernel.select(rpipes, wpipes, nil, 2)
+      #readwaiting_pipes = datawaiting_pipes[0]
+      #writewaiting_pipes = datawaiting_pipes[1]
+      
+      # Switch to 2 selects instead of 1
+      #readwaiting_pipes = Kernel.select(rpipes, nil, nil, 2)[0]
+      #writewaiting_pipes = Kernel.select(nil, wpipes, nil, 2)[1]
+
+      # Finally settled on going through the pipes instead of select for Linux bug
+      unless rpipes.size != wpipes.size
+        rpipes.size.times do |i|
+          r = rpipes[i]
+          w = wpipes[i]
+
+          pp "read: #{readwaiting_pipes}" if FORKIFY_DEBUG
+          pp "write: #{writewaiting_pipes}" if FORKIFY_DEBUG
+
           w.close
           data = ''
           while ( buf = r.read(8192) )
@@ -72,6 +98,7 @@ module Enumerable
           end
           result = Marshal.load( data )
           r.close
+          pp "Pushing result: #{result}" if FORKIFY_DEBUG
           results << result
         end
       end

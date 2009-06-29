@@ -22,7 +22,7 @@
 
 == REQUIREMENTS:
 
-* None
+* Testy - only for running the tests
 
 == INSTALL:
 

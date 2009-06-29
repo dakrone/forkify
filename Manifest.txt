@@ -6,3 +6,4 @@ lib/forkify.rb
 test/test_forkify.rb
 examples/a.rb
 examples/b.rb
+examples/c.rb
