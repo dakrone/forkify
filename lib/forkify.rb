@@ -88,8 +88,8 @@ module Enumerable
           r = rpipes[i]
           w = wpipes[i]
 
-          pp "read: #{readwaiting_pipes}" if FORKIFY_DEBUG
-          pp "write: #{writewaiting_pipes}" if FORKIFY_DEBUG
+          pp "read: #{r}" if FORKIFY_DEBUG
+          pp "write: #{w}" if FORKIFY_DEBUG
 
           w.close
           data = ''
