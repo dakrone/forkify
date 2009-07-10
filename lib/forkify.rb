@@ -6,7 +6,7 @@ require 'pp'
 
 module Enumerable
 
-  def forkify2 procs = 5, &block
+  def forkify_pool procs = 5, &block
     puts "Forkify Class: #{self.class}" if FORKIFY_DEBUG
     if self === Array
       items = self
@@ -99,6 +99,27 @@ module Enumerable
     return results
   end
 
+  def forkify(opts = {}, &block)
+    puts opts.inspect
+    if opts.class == Fixnum # it's the number of processes
+      procs = opts
+      method = :serial
+    elsif opts.class == Hash
+      procs = opts[:procs] || 5
+      method = opts[:method] || :serial
+    end
+
+    puts "procs: #{procs}, method: #{method.inspect}"
+
+    if method == :serial
+      forkify_serial(procs, &block)
+    elsif method == :pool
+      forkify_pool(procs, &block)
+    else
+      raise "I don't know that method of forking: #{method}"
+    end
+  end
+
   #
   # Forkify will process _block_'s actions using processes. If no number of processes is
   # given, the default of 5 will be used. If there are less than _procs_ number of items
@@ -115,7 +136,7 @@ module Enumerable
   #
   #    10.times.forkify(10) { sleep(1) } => [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] (runs for less than 2 seconds)
   #
-  def forkify procs = 5, &block
+  def forkify_serial procs = 5, &block
     puts "Forkify Class: #{self.class}" if FORKIFY_DEBUG
     if self === Array
       items = self
