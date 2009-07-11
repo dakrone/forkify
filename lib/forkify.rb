@@ -6,6 +6,29 @@ require 'pp'
 
 module Enumerable
 
+  def forkify(opts = {}, &block)
+    puts opts.inspect
+    if opts.class == Fixnum # it's the number of processes
+      procs = opts
+      method = :serial
+    elsif opts.class == Hash
+      procs = opts[:procs] || 5
+      method = opts[:method] || :serial
+    end
+
+    puts "procs: #{procs}, method: #{method.inspect}"
+
+    if method == :serial
+      forkify_serial(procs, &block)
+    elsif method == :pool
+      forkify_pool(procs, &block)
+    else
+      raise "I don't know that method of forking: #{method}"
+    end
+  end
+
+  private # should I keep these private? not sure.
+
   def forkify_pool procs = 5, &block
     puts "Forkify Class: #{self.class}" if FORKIFY_DEBUG
     if self === Array
@@ -97,27 +120,6 @@ module Enumerable
     }
 
     return results
-  end
-
-  def forkify(opts = {}, &block)
-    puts opts.inspect
-    if opts.class == Fixnum # it's the number of processes
-      procs = opts
-      method = :serial
-    elsif opts.class == Hash
-      procs = opts[:procs] || 5
-      method = opts[:method] || :serial
-    end
-
-    puts "procs: #{procs}, method: #{method.inspect}"
-
-    if method == :serial
-      forkify_serial(procs, &block)
-    elsif method == :pool
-      forkify_pool(procs, &block)
-    else
-      raise "I don't know that method of forking: #{method}"
-    end
   end
 
   #
