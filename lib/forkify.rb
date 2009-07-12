@@ -1,13 +1,29 @@
-FORKIFY_DEBUG = true
-require 'pp' if FORKIFY_DEBUG
+FORKIFY_DEBUG = false
 
-require 'rinda/tuplespace'
 require 'pp'
+require 'rinda/tuplespace'
 
 module Enumerable
 
+  #
+  # Forkify will process _block_'s actions using processes. If no number of processes is
+  # given, the default of 5 will be used. If there are less than _procs_ number of items
+  # in the +Enumerable+ type, less processes will be spawned.
+  #
+  # It should be noted that forkify will *always* return an +Array+ at this time, so be
+  # careful with +Hash+ objects.
+  #
+  # = Examples
+  #
+  #    [1, 2, 3].forkify { |n| n*2 } => [2, 4, 6]
+  #
+  #    {:a => 1, :b => 2, :c => 3}.forkify { |k, v| [v, k] } => [[1, :a], [2, :b], [3, :c]]
+  #
+  #    10.times.forkify(10) { sleep(1) } => [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] (runs for less than 2 seconds)
+  #
   def forkify(opts = {}, &block)
-    puts opts.inspect
+    puts opts.inspect if FORKIFY_DEBUG
+
     if opts.class == Fixnum # it's the number of processes
       procs = opts
       method = :serial
@@ -16,11 +32,14 @@ module Enumerable
       method = opts[:method] || :serial
     end
 
-    puts "procs: #{procs}, method: #{method.inspect}"
+    puts "procs: #{procs}, method: #{method.inspect}" if FORKIFY_DEBUG
 
     if method == :serial
       forkify_serial(procs, &block)
     elsif method == :pool
+      if RUBY_VERSION < "1.9.1"
+        raise "Pool forking is only supported on Ruby 1.9.1+"
+      end
       forkify_pool(procs, &block)
     else
       raise "I don't know that method of forking: #{method}"
@@ -58,9 +77,9 @@ module Enumerable
         ts = Rinda::TupleSpaceProxy.new(DRbObject.new_with_uri('druby://localhost:53421'))
 
         loop do
-          puts "Taking..."
+          puts "Taking..." if FORKIFY_DEBUG
           item = ts.take([:enum, nil, nil])
-          pp "Got => #{item}"
+          pp "Got => #{item}" if FORKIFY_DEBUG
 
           # our termination tuple
           break if item == [:enum, -1, nil]
@@ -72,14 +91,13 @@ module Enumerable
             end
 
           # return result
-          puts "writing result: #{result.inspect}"
+          puts "writing result: #{result.inspect}" if FORKIFY_DEBUG
           ts.write([:result, item[1], result])
 
-          puts "loop bottom"
         end
         DRb.stop_service
 
-        puts "child #{$$} dying"
+        puts "child #{$$} dying" if FORKIFY_DEBUG
         exit!
       end
 
@@ -90,21 +108,20 @@ module Enumerable
 
     # write termination tuples
     items.size.times do
-      puts "pushing terminator"
+      puts "pushing terminator" if FORKIFY_DEBUG
       pts.write([:enum, -1, nil])
     end
 
     items.each_with_index { |item, index|
-      puts "pushing data"
+      puts "pushing data" if FORKIFY_DEBUG
       pts.write([:enum, index, item])
     }
 
     DRb.start_service('druby://localhost:53421', pts)
 
-    sleep(1)
-    # TODO: get results, where?
+    # Grab results
     items.size.times do
-      puts "grabbing a result..."
+      puts "grabbing a result..." if FORKIFY_DEBUG
       result_tuples << pts.take([:result, nil, nil])
     end
 
@@ -115,29 +132,13 @@ module Enumerable
 
     # gather results and sort them
     result_tuples.map { |t|
-      puts "results[#{t[1]}] = #{t[2]}"
+      puts "results[#{t[1]}] = #{t[2]}" if FORKIFY_DEBUG
       results[t[1]] = t[2]
     }
 
     return results
   end
 
-  #
-  # Forkify will process _block_'s actions using processes. If no number of processes is
-  # given, the default of 5 will be used. If there are less than _procs_ number of items
-  # in the +Enumerable+ type, less processes will be spawned.
-  #
-  # It should be noted that forkify will *always* return an +Array+ at this time, so be
-  # careful with +Hash+ objects.
-  #
-  # = Examples
-  #
-  #    [1, 2, 3].forkify { |n| n*2 } => [2, 4, 6]
-  #
-  #    {:a => 1, :b => 2, :c => 3}.forkify { |k, v| [v, k] } => [[1, :a], [2, :b], [3, :c]]
-  #
-  #    10.times.forkify(10) { sleep(1) } => [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] (runs for less than 2 seconds)
-  #
   def forkify_serial procs = 5, &block
     puts "Forkify Class: #{self.class}" if FORKIFY_DEBUG
     if self === Array
