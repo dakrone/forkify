@@ -46,12 +46,12 @@ Testy.testing 'forkify' do
     t.check :hash_length, :expect => 3, :actual => r.size
   end
 
-  test 'array of nils' do |t|
+  test 'serial array of nils' do |t|
     r = [nil, nil].forkify { |n| n }
     t.check :nil_array, :expect => [nil, nil], :actual => r
   end
 
-  test 'array of nils' do |t|
+  test 'pool array of nils' do |t|
     r = [nil, nil].forkify(:method => :pool) { |n| n }
     t.check :nil_array, :expect => [nil, nil], :actual => r
   end
