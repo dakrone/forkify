@@ -1,0 +1,2 @@
+- Fix the race condition/deadlock bug that occurs when a pool forkify is run IMMEDIATELY after a previous one
+- Have the pool method pick a random port that's not in use instead of a hardcoded one
