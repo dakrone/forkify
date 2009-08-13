@@ -2,6 +2,7 @@ FORKIFY_DEBUG = false
 
 require 'pp'
 require 'rinda/tuplespace'
+require 'timeout'
 
 module Enumerable
 
@@ -72,17 +73,32 @@ module Enumerable
 
       pid = fork
       unless pid
-        #puts "service?"
+
         DRb.start_service
-        ts = Rinda::TupleSpaceProxy.new(DRbObject.new_with_uri('druby://localhost:53421'))
+
+        ts = Rinda::TupleSpaceProxy.new(DRbObject.new_with_uri('druby://127.0.0.1:53421'))
+
+        conn_attempts = 10
+        done_work = false
 
         loop do
-          puts "Taking..." if FORKIFY_DEBUG
+
+          # break if no more items in the queue
+          break if done_work and ts.read_all([:enum, nil, nil]).empty?
+
+          puts "#{$$} Taking..." if FORKIFY_DEBUG
+
+          begin
           item = ts.take([:enum, nil, nil])
+          rescue DRb::DRbConnError
+            conn_attempts -= 1
+            sleep(0.2)
+            retry if conn_attempts > 0
+            exit(-1)
+          end
           pp "Got => #{item}" if FORKIFY_DEBUG
 
           # our termination tuple
-          break if item == [:enum, -1, nil]
           result =
             begin
               block.call(item[2])
@@ -93,6 +109,7 @@ module Enumerable
           # return result
           puts "writing result: #{result.inspect}" if FORKIFY_DEBUG
           ts.write([:result, item[1], result])
+          done_work ||= true
 
         end
         DRb.stop_service
@@ -107,17 +124,36 @@ module Enumerable
     pts = Rinda::TupleSpace.new
 
     # write termination tuples
-    items.size.times do
-      puts "pushing terminator" if FORKIFY_DEBUG
-      pts.write([:enum, -1, nil])
-    end
+    #num_procs.times do
+      #puts "pushing terminator" if FORKIFY_DEBUG
+      #pts.write([:enum, -1, nil])
+    #end
 
     items.each_with_index { |item, index|
       puts "pushing data" if FORKIFY_DEBUG
       pts.write([:enum, index, item])
     }
 
-    DRb.start_service('druby://localhost:53421', pts)
+    provider = nil
+    conn_attempts = 100
+    loop do
+      begin
+        provider = DRb.start_service('druby://127.0.0.1:53421', pts)
+      rescue Exception => e
+        conn_attempts -= 1
+        #print "."
+        retry if conn_attempts > 0
+        raise "bleh, I couldn't start DRb"
+      else
+        break
+      end
+    end
+
+    pp "Waiting for pids: #{pids.inspect}" if FORKIFY_DEBUG
+    pids.reverse.each { |p|
+      puts "Waiting for #{p}" if FORKIFY_DEBUG
+      Process.waitpid(p)
+    }
 
     # Grab results
     items.size.times do
@@ -125,10 +161,11 @@ module Enumerable
       result_tuples << pts.take([:result, nil, nil])
     end
 
-    pp "Waiting for pids: #{pids.inspect}" if FORKIFY_DEBUG
-    pids.each { |p| Process.waitpid(p)  }
-
-    DRb.stop_service
+    provider.stop_service
+    # wait for death
+    while provider.alive? do
+      #print ":"
+    end
 
     # gather results and sort them
     result_tuples.map { |t|
