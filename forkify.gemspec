@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   It aims to be safe to use on Ruby 1.8.6+ and Ruby 1.9.1+}
   s.email = ["lee@writequit.org"]
   s.extra_rdoc_files = ["History.txt", "Manifest.txt", "README.txt"]
-  s.files = ["History.txt", "Manifest.txt", "README.txt", "Rakefile", "lib/forkify.rb", "test/test_forkify.rb", "examples/a.rb", "examples/b.rb", "examples/c.rb"]
+  s.files = ["History.txt", "Manifest.txt", "README.txt", "TODO.txt", "Rakefile", "lib/forkify.rb", "spec/forkify_spec.rb", "examples/a.rb", "examples/b.rb", "examples/c.rb", "examples/d.rb"]
   s.homepage = %q{http://github.com/dakrone/forkify}
   s.rdoc_options = ["--main", "README.txt"]
   s.require_paths = ["lib"]
