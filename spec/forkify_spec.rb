@@ -12,6 +12,8 @@ describe 'forkify' do
     (time2 - time1).should < 3
   end
 
+  sleep 1
+
   it 'should fork with a pool and take less time' do
     time1 = Time.now
     r = [1, 2, 3].forkify(:procs => 3, :method => :pool) { |n| sleep(1) }
@@ -23,6 +25,8 @@ describe 'forkify' do
   it 'should return an array of results from a serial fork' do
     [1, 2, 3].forkify { |n| n * 2 }.should == [2, 4, 6]
   end
+
+  sleep 1
 
   it 'should return an array of results from a pool fork' do
     [1, 2, 3].forkify(:method => :pool) { |n| n * 2 }.should == [2, 4, 6]
@@ -36,6 +40,8 @@ describe 'forkify' do
     r.size.should == 3
   end
 
+  sleep 1
+
   it 'should return a hash of results from a pool fork' do
     r = {:a => 1, :b => 2, :c => 3}.forkify(:method => :pool) { |k, v| [k, v*2] }
     r.should include([:a, 2])
@@ -47,6 +53,8 @@ describe 'forkify' do
   it 'should return an array of nils from a serial nil fork' do
     [nil, nil].forkify { |n| n }.should == [nil, nil]
   end
+
+  sleep 1
 
   it 'should return an array of nils from a pool nil fork' do
     [nil, nil].forkify(:method => :pool) { |n| n }.should == [nil, nil]

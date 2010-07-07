@@ -73,8 +73,13 @@ module Enumerable
 
       pid = fork
       unless pid
+        puts "#{$$} Spinning up." if FORKIFY_DEBUG
+
+        # DRb takes a long time to start without this
+        Socket.do_not_reverse_lookup=true;
 
         DRb.start_service
+        puts "#{$$} started service" if FORKIFY_DEBUG
 
         ts = Rinda::TupleSpaceProxy.new(DRbObject.new_with_uri('druby://127.0.0.1:53421'))
 
@@ -91,6 +96,7 @@ module Enumerable
           begin
           item = ts.take([:enum, nil, nil])
           rescue DRb::DRbConnError
+            puts "connection error..." if FORKIFY_DEBUG
             conn_attempts -= 1
             sleep(0.2)
             retry if conn_attempts > 0
