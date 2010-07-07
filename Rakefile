@@ -4,7 +4,7 @@ require 'rubygems'
 require 'hoe'
 require './lib/forkify.rb'
 
-FORKIFY_VERSION = "0.0.2"
+FORKIFY_VERSION = "0.0.3"
 
 Hoe.spec('forkify') do
   version = FORKIFY_VERSION
