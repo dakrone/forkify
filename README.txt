@@ -13,12 +13,21 @@
 * forkify is _extremely_ beta quality currently.
 * NOTE: Hash forkifing returns a 2-dimensional array.
 * Spawn processes easily!
+* Pool forking requires ruby 1.9.1
 
 == SYNOPSIS:
+
+  Simple usage:
 
   enumerable = %w( a b c d )
   enumerable.forkify(2) { 'process this block using two worker processes' }
   enumerable.forkify    { 'process this block using the default of 5 processes' }
+
+
+  Forkify also supports pool forking (instead of forking serially)
+
+  enumerable.forkify(:method => :pool, :procs => 3) { |x| puts x; }
+  See http://writequit.org/blog/?p=315 for more details about pool forking.
 
 == REQUIREMENTS:
 
